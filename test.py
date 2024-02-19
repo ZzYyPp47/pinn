@@ -28,6 +28,8 @@ def set_seed(seed):
 def test():
     # 初始化
     seed = 0
+    mid = 20 # Res网络隐藏层神经元个数
+    num_blocks = 50 # 残差块个数
     Arc = [2,20,20,1] # 神经网络架构
     func = nn.ReLU() # 确定激活函数
     N_pde = 5000
@@ -38,6 +40,7 @@ def test():
     learning_rate = 0.001
     init_method = torch.nn.init.kaiming_uniform_ # 设置神经网络参数初始化方法
     name = 'FNN' # 模型参数保存的名字
+    load_path = 'save/'+name+'.pth' # 加载模型的路径
     total_epochs = 6000
     tor = 0.0001 # loss阈值
     loss_func = nn.MSELoss().to(device) # 确定损失计算函数
@@ -57,7 +60,8 @@ def test():
 
     # 加载并测试
     pinn_demo.model.to('cpu') # 卸载到cpu
-    checkpoint = torch.load("save/FNN.pth")
+    checkpoint = torch.load(load_path) # 加载模型
+    print('loading from',load_path)
     pinn_demo.model.load_state_dict(checkpoint['model'])
     pinn_demo.opt.load_state_dict(checkpoint['opt'])
     pinn_demo.Epochs_loss = checkpoint['loss']
@@ -72,7 +76,7 @@ def test():
         mesh_t = grid_t.reshape(-1, 1)
         y = (torch.exp(-mesh_t) * torch.sin(torch.pi * mesh_x)).reshape(grid_x.shape)
         pred = pinn_demo.model(torch.cat([mesh_x, mesh_t], dim=1)).reshape(grid_x.shape)
-        N = 500 # 等高线密集程度
+        N = 900 # 等高线密集程度
 
         plt.figure()
         plt.contourf(grid_t,grid_x,pred,N,cmap='jet')
