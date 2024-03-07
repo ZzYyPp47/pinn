@@ -23,6 +23,7 @@ def set_seed(seed):
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)  # 为所有GPU设置随机种子
         torch.backends.cudnn.deterministic = True  # 使用确定性算法
+        torch.backends.cudnn.benchmark = True # cudnn基准(使用卷积时可能影响结果)
 
 # 加载并测试...
 def test():
@@ -56,6 +57,7 @@ def test():
     # 务必确定model与point位于同一设备!!
 
     # 训练
+    print('now using device:', device,':',torch.cuda.current_device())
     pinn_demo.train()
 
     # 加载并测试
