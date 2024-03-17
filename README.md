@@ -4,6 +4,32 @@
 
 本项目利用pytorch实现了一个简易的模块化PINN，凭此可以快速的实现一些简易的PINN。
 
+## 引用
+
+<[ZzYyPp47/Solving_Allen-Cahn_with_Adaptive_PINN: 复现CICP论文提出的几种改进PINN性能的方法 (github.com)](https://github.com/ZzYyPp47/Solving_Allen-Cahn_with_Adaptive_PINN)>
+
+## 更新
+
+### 2024.3.18：
+
+`test.py`:引入画图辅助函数;默认激活函数变为$Tanh()$;默认使用$Adam+L-BFGS$进行优化;加入$L_2$误差的计算;loss$改为对数图
+
+`data.py`:改为继承Dataset;从而允许使用dataloader进行mini-batch训练
+
+`loss.py`:新增了pointcontainer容器;从而允许以None point进行初始化;新增了update_point方法;从而允许在过程中增加新的点
+
+`pinn.py`:删去了冗余的point成员;增加了$L-BFGS$​的闭包函数;增加了train方法;从而允许使用最基本的训练模块;将save方法抽离
+
+### 2024.3.7:
+
+增加了cudnn基准，和一些提示信息。
+
+### 2024.2.20:
+
+为ResNet添加了初始化,添加了加载模型的路径和提示信息。
+
+
+
 ## 代码结构
 
 ![1](1.png)
@@ -45,27 +71,19 @@ $$
 
 所使用的参数可在`test.py`中找到
 
-在下述配置的机器上运行`test.py`大约时间为:
+## 编译条件
 
-> 编译条件:
->
-> python 3.10
->
-> torch 1.12.1+cu113
->
-> 配置:
->
-> CPU: Intel Core i7-9750H@2.60GHZ
->
-> GPU: NVIDIA GTX 1650
->
-> using CPU: training time :约50s
->
-> using GPU: training time :约30s
+python 3.12.2
+
+pytorch 2.2 +cu12.1
+
+一点点运气+良好的心态
 
 ## 运行结果
 
 ![1](2.png)
+
+$L_2误差为0.0041590589098632336$
 
 ## 注意事项
 

@@ -28,7 +28,6 @@ class pinn(object):
         self.weights_init = weights_init # 确定神经网络初始化的方式
         self.loss_func = loss_func # 损失函数(接口)
         self.model = model # 神经网络(接口)
-        self.point = point # 数据点(接口)
         self.opt = opt # 优化器(接口)
         self.loss_computer = LossCompute(model, loss_func, point, loss_weight)  # 损失计算(接口)
         print(self.model)
@@ -42,28 +41,49 @@ class pinn(object):
             self.weights_init(model.weight.data)
             model.bias.data.zero_()
 
+    # 为LBFGS优化器准备的闭包函数
+    def closure(self):
+        self.opt.zero_grad()  # 清零梯度
+        Loss = self.loss_computer.loss()  # 计算损失
+        Loss.backward(retain_graph=True) # 反向计算出梯度
+        return Loss
+
     # 训练模型
-    def train(self):
+    def train_all(self):
         start_time = time.time()
         self.model = self.model.to(self.device) # 将model移入相应设备
         self.model.apply(self.weights_initer)# 神经网络初始化
         self.model.train() # 启用训练模式
-        print('start training,using seed:',torch.initial_seed())
+        print('start training,using seed:{}'.format(torch.initial_seed()))
         for epoch in range(self.total_epochs):
             self.opt.zero_grad() # 清零梯度信息
             Loss = self.loss_computer.loss()
-            self.Epochs_loss.append([epoch,Loss.cpu().detach().numpy()])
+            self.Epochs_loss.append([epoch + 1,Loss.item()])
             Loss.backward(retain_graph=True) # 反向计算出梯度
             self.opt.step() # 更新参数
             if (epoch + 1)% 100 == 0:
-                print('epoch:',epoch + 1,'Loss=',Loss.cpu().detach().numpy())
+                print('Epoch:{}/{},Loss={}'.format(epoch + 1,self.total_epochs,Loss.item()))
             if Loss <= self.tor:
-                print('epoch:', epoch + 1,'loss_func =',Loss.cpu().detach().numpy(), '<=', self.tor, '(given tolerate loss_func)')
+                print('Epoch:{}/{},Loss={}<={}(given tolerate loss)'.format(epoch + 1,self.total_epochs,Loss.item(),self.tor))
                 self.Epochs_loss = np.array(self.Epochs_loss)
                 break
-        self.Epochs_loss = np.array(self.Epochs_loss)
+        # self.Epochs_loss = np.array(self.Epochs_loss)
         state_dict = {"Arc": self.model,"seed": torch.initial_seed(), "model": self.model.state_dict(), "opt": self.opt.state_dict(), "loss": self.Epochs_loss}
         torch.save(state_dict,self.path)
-        print('training terminated,saved to',self.path)
+        print('training terminated,saved to{}'.format(self.path))
         end_time =time.time()
-        print('using times:',end_time-start_time,'s')
+        print('using times:{}s'.format(end_time-start_time))
+
+    # 最基本的训练模块
+    def train(self):
+        self.opt.zero_grad()  # 清零梯度信息
+        Loss = self.loss_computer.loss()
+        Loss.backward(retain_graph=True)  # 反向计算出梯度
+        self.opt.step()  # 更新参数
+        return Loss.item()
+
+     # 保存模型参数
+    def save(self):
+        state_dict = {"Arc": self.model,"seed": torch.initial_seed(), "model": self.model.state_dict(), "opt": self.opt.state_dict(), "loss": self.Epochs_loss}
+        torch.save(state_dict,self.path)
+        print('model saved to {}'.format(self.path))
