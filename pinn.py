@@ -45,8 +45,10 @@ class pinn(object):
     def closure(self):
         self.opt.zero_grad()  # 清零梯度
         Loss = self.loss_computer.loss()  # 计算损失
+        self.Epochs_loss.append([self.Epochs_loss[-1][0] + 1, Loss.item()])
+        print('loss:', Loss.item())
         Loss.backward(retain_graph=True) # 反向计算出梯度
-        return Loss
+        return Loss.item()
 
     # 训练模型
     def train_all(self):

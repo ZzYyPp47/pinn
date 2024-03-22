@@ -32,7 +32,7 @@ def test():
     init_method = torch.nn.init.kaiming_uniform_ # 设置神经网络参数初始化方法
     name = 'FNN' # 模型参数保存的名字
     load_path = 'save/'+name+'.pth' # 加载模型的路径
-    total_epochs = 10000
+    total_epochs = 40000
     tor = 1e-6 # loss阈值
     loss_func = nn.MSELoss().to(device) # 确定损失计算函数
     loss_weight = [1,1,1,0] # loss各项权重(pde,bound,ini,real)
@@ -48,15 +48,15 @@ def test():
     # 训练
     pinn_demo.train_all()
     # 初始化L-BFGS优化器
-    pinn_demo.opt = torch.optim.LBFGS(pinn_demo.model.parameters(), lr=0.01, max_iter=20, line_search_fn='strong_wolfe')
-    num_epochs_lbfgs = 100
+    pinn_demo.opt = torch.optim.LBFGS(pinn_demo.model.parameters(), history_size=100, tolerance_change=0, tolerance_grad=1e-09, max_iter=35000, max_eval=40000)
+    num_epochs_lbfgs = 1
     print('now using L_BFGS...')
     for epoch in range(num_epochs_lbfgs):
-        Loss = pinn_demo.opt.step(pinn_demo.closure)  # 更新权重,注意不要加括号!因为传递的是函数本身而不是函数的返回值！
-        pinn_demo.Epochs_loss.append([total_epochs + epoch + 1, Loss.item()])
-        print('epoch:{}/{}'.format(epoch + 1,num_epochs_lbfgs))
-        print('loss:{}'.format(Loss))
-    pinn_demo.Epochs_loss = np.array(pinn_demo.Epochs_loss)
+        pinn_demo.opt.step(pinn_demo.closure)  # 更新权重,注意不要加括号!因为传递的是函数本身而不是函数的返回值！
+        # pinn_demo.Epochs_loss.append([total_epochs + epoch + 1, Loss.item()])
+        # print('epoch:{}/{}'.format(epoch + 1,num_epochs_lbfgs))
+        # print('loss:{}'.format(Loss))
+    # pinn_demo.Epochs_loss = np.array(pinn_demo.Epochs_loss)
     pinn_demo.save()
 
     # 画图
@@ -80,6 +80,7 @@ def draw(pinn, load_path, device):
     pinn.model.load_state_dict(checkpoint['model'])
     pinn.opt.load_state_dict(checkpoint['opt'])
     pinn.Epochs_loss = checkpoint['loss']
+    pinn.Epochs_loss = np.array(pinn.Epochs_loss)
     pinn.model.eval()  # 启用评估模式
     with torch.no_grad():
         x = torch.arange(-1, 1.002, 0.002, device=device)  # 不包含最后一项
