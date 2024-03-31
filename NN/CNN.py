@@ -19,8 +19,10 @@ import torch.nn as nn
 # 以此Arc，脚本将自动创建一个具有3个卷积块(共6层)的卷积神经网络
 
 class CNN(nn.Module):
-    def __init__(self,Arc,pool_size,func,device):
+    def __init__(self,Arc,pool_size,func,device,input_transform = None,output_transform = None):
         super(CNN, self).__init__()  # 调用父类的构造函数
+        self.input_transform = input_transform # 输入特征转换
+        self.output_transform = output_transform # 输出特征转换
         self.func = func # 定义激活函数
         self.Arc = Arc # 定义网络架构(这里Arc是一个字典)
         self.pool_size = pool_size
@@ -38,6 +40,10 @@ class CNN(nn.Module):
             layers.append(nn.MaxPool2d(self.pool_size,stride=1,padding='same')) # 注意padding='same'只有在步长为1时才可用
         return nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self,x):
+        if self.input_transform is not None:
+            x = self.input_transform(x)
         out = self.model(x)
+        if self.output_transform is not None:
+            out = self.output_transform(out)
         return out

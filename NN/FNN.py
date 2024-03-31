@@ -14,8 +14,10 @@ import torch
 import torch.nn as nn
 
 class FNN(nn.Module):
-    def __init__(self,Arc,func,device):
+    def __init__(self,Arc,func,device,input_transform = None,output_transform = None):
         super(FNN, self).__init__()  # 调用父类的构造函数
+        self.input_transform = input_transform # 输入特征转换
+        self.output_transform = output_transform # 输出特征转换
         self.func = func # 定义激活函数
         self.Arc = Arc # 定义网络架构
         self.device = device
@@ -33,5 +35,9 @@ class FNN(nn.Module):
 
 
     def forward(self,x):
+        if self.input_transform is not None:
+            x = self.input_transform(x)
         out = self.model(x)
+        if self.output_transform is not None:
+            out = self.output_transform(out)
         return out
