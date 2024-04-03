@@ -30,16 +30,16 @@ def test():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') # 自动选择可用设备,优先GPU
     learning_rate = 0.001
     init_method = torch.nn.init.kaiming_uniform_ # 设置神经网络参数初始化方法
-    name = 'FNN' # 模型参数保存的名字
+    name = 'FNN_hard' # 模型参数保存的名字
     load_path = 'save/'+name+'.pth' # 加载模型的路径
     total_epochs = 20000
     tor = 1e-6 # loss阈值
     loss_func = nn.MSELoss().to(device) # 确定损失计算函数
-    loss_weight = [1,1,1,0] # loss各项权重(pde,bound,ini,real)
+    loss_weight = [1,0,0,0] # loss各项权重(pde,bound,ini,real)
 
     # 建立模型
     set_seed(seed)  # 设置确定的随机种子
-    model = FNN(Arc,func,device)
+    model = FNN(Arc,func,device,output_transform=func_out)
     point = create_point(N_pde,N_bound,N_ini,N_real,device)
     opt = torch.optim.Adam(params = model.parameters(),lr=learning_rate)
     pinn_demo = pinn(name,total_epochs,tor,loss_func,model,point,opt,init_method,loss_weight,device)
@@ -62,6 +62,9 @@ def test():
     # 画图
     draw(pinn_demo, load_path, device)
 
+# 输出转换函数
+def func_out(out,x):
+    return (x[:,0:1] - 1) * (x[:,0:1] + 1) * x[:,1:2] * out + torch.sin(torch.pi * x[:,0:1])
 
 # 设置随机种子
 def set_seed(seed):

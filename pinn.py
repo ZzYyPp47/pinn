@@ -63,7 +63,7 @@ class pinn(object):
             self.Epochs_loss.append([epoch + 1,Loss.item()])
             Loss.backward(retain_graph=True) # 反向计算出梯度
             self.opt.step() # 更新参数
-            if (epoch + 1)% 100 == 0:
+            if (epoch + 1)% 1000 == 0:
                 print('Epoch:{}/{},Loss={}'.format(epoch + 1,self.total_epochs,Loss.item()))
             if Loss <= self.tor:
                 print('Epoch:{}/{},Loss={}<={}(given tolerate loss)'.format(epoch + 1,self.total_epochs,Loss.item(),self.tor))

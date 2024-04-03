@@ -39,5 +39,5 @@ class FNN(nn.Module):
             x = self.input_transform(x)
         out = self.model(x)
         if self.output_transform is not None:
-            out = self.output_transform(out)
+            out = self.output_transform(out,x)
         return out

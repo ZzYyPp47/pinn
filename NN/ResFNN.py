@@ -34,5 +34,5 @@ class ResFNN(nn.Module):
             out = self.func(out)  # 结果进入预设的激活函数
         out = self.full_E(out)  # 最后，数据通过最后一层全连接层，得到最终输出
         if self.output_transform is not None:
-            out = self.output_transform(out)
+            out = self.output_transform(out,x)
         return out
