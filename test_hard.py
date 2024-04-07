@@ -46,9 +46,10 @@ def test():
     # 务必确定model与point位于同一设备!!
 
     # 训练
+    start_time = time.time()
     pinn_demo.train_all()
     # 初始化L-BFGS优化器
-    pinn_demo.opt = torch.optim.LBFGS(pinn_demo.model.parameters(), history_size=100, tolerance_change=0, tolerance_grad=1e-09, max_iter=15000, max_eval=20000)
+    pinn_demo.opt = torch.optim.LBFGS(pinn_demo.model.parameters(), history_size=100, tolerance_change=0, tolerance_grad=1e-09, max_iter=5000, max_eval=10000)
     num_epochs_lbfgs = 1
     print('now using L_BFGS...')
     for epoch in range(num_epochs_lbfgs):
@@ -57,6 +58,8 @@ def test():
         # print('epoch:{}/{}'.format(epoch + 1,num_epochs_lbfgs))
         # print('loss:{}'.format(Loss))
     # pinn_demo.Epochs_loss = np.array(pinn_demo.Epochs_loss)
+    end_time = time.time()
+    print('using times:{}s'.format(end_time - start_time))
     pinn_demo.save()
 
     # 画图

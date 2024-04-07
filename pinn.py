@@ -52,7 +52,6 @@ class pinn(object):
 
     # 训练模型
     def train_all(self):
-        start_time = time.time()
         self.model = self.model.to(self.device) # 将model移入相应设备
         self.model.apply(self.weights_initer)# 神经网络初始化
         self.model.train() # 启用训练模式
@@ -67,14 +66,12 @@ class pinn(object):
                 print('Epoch:{}/{},Loss={}'.format(epoch + 1,self.total_epochs,Loss.item()))
             if Loss <= self.tor:
                 print('Epoch:{}/{},Loss={}<={}(given tolerate loss)'.format(epoch + 1,self.total_epochs,Loss.item(),self.tor))
-                self.Epochs_loss = np.array(self.Epochs_loss)
+                # self.Epochs_loss = np.array(self.Epochs_loss)
                 break
         # self.Epochs_loss = np.array(self.Epochs_loss)
-        state_dict = {"Arc": self.model,"seed": torch.initial_seed(), "model": self.model.state_dict(), "opt": self.opt.state_dict(), "loss": self.Epochs_loss}
-        torch.save(state_dict,self.path)
-        print('training terminated,saved to{}'.format(self.path))
-        end_time =time.time()
-        print('using times:{}s'.format(end_time-start_time))
+        # state_dict = {"Arc": self.model,"seed": torch.initial_seed(), "model": self.model.state_dict(), "opt": self.opt.state_dict(), "loss": self.Epochs_loss}
+        # torch.save(state_dict,self.path)
+        # print('training terminated,saved to {}'.format(self.path))
 
     # 最基本的训练模块
     def train(self):
