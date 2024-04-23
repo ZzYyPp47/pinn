@@ -81,7 +81,6 @@ def draw(pinn, load_path, device):
     checkpoint = torch.load(load_path)  # 加载模型
     print('loading from {}'.format(load_path))
     pinn.model.load_state_dict(checkpoint['model'])
-    pinn.opt.load_state_dict(checkpoint['opt'])
     pinn.Epochs_loss = checkpoint['loss']
     pinn.Epochs_loss = np.array(pinn.Epochs_loss)
     pinn.model.eval()  # 启用评估模式
