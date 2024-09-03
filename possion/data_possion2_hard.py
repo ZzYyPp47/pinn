@@ -10,7 +10,7 @@
 import torch
 from torch.utils.data import Dataset
 
-class create_point(object):
+class create_point(Dataset):
     def __init__(self,N_pde,N_bound,N_ini,N_real,device):
         self.device = device
         self.rand_point(N_pde,N_bound,N_ini,N_real)
