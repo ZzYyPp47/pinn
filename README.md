@@ -8,6 +8,8 @@
 
 <[ZzYyPp47/Solving_Allen-Cahn_with_Adaptive_PINN: 复现CICP论文提出的几种改进PINN性能的方法 (github.com)](https://github.com/ZzYyPp47/Solving_Allen-Cahn_with_Adaptive_PINN)>
 
+<[ZzYyPp47/Attention: 复现McClenny论文提出的软注意力方法 (github.com)](https://github.com/ZzYyPp47/Attention)>
+
 ## 更新
 
 ### 2024.4.7:
