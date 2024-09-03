@@ -1,28 +1,86 @@
-# 带有软注意力机制的PINN
+# 一个简易的模块化物理信息神经网络实现(PINN)
 
 ## 简介
 
-本项目在<[ZzYyPp47/pinn: 一个简易的模块化物理信息神经网络实现(PINN) (github.com)](https://github.com/ZzYyPp47/pinn)>基础上，复现了论文:
+本项目利用pytorch实现了一个简易的模块化PINN，凭此可以快速的实现一些简易的PINN。
 
->```
->@article{mcclenny2023self,
->  title={Self-adaptive physics-informed neural networks},
->  author={McClenny, Levi D and Braga-Neto, Ulisses M},
->  journal={Journal of Computational Physics},
->  volume={474},
->  pages={111722},
->  year={2023},
->  publisher={Elsevier}
->}
->```
+## 引用
 
-所提出的软注意力机制。
+<[ZzYyPp47/Solving_Allen-Cahn_with_Adaptive_PINN: 复现CICP论文提出的几种改进PINN性能的方法 (github.com)](https://github.com/ZzYyPp47/Solving_Allen-Cahn_with_Adaptive_PINN)>
 
-以下未标注`.py`文件的图片,可自行通过<[ZzYyPp47/pinn: 一个简易的模块化物理信息神经网络实现(PINN) (github.com)](https://github.com/ZzYyPp47/pinn)>复现
+## 更新
 
-## Example
+### 2024.4.7:
 
-以下述示例PDE展示注意力机制的行为：
+`test.py`:改进了一些性能
+
+`test_hard.py`:改进了一些性能
+
+### 2024.4.4:
+
+`NN`:修改了小许bug
+
+`test.py`:改进了一些性能
+
+`test_hard.py`:增加硬边界pinn
+
+### 2024.3.31：
+
+`NN`:为所有类增加了输入输出转换函数
+
+### 2024.3.22：
+
+`pinn.py`:调整$L-BFGS$的优化参数、调整了迭代次数
+
+`test.py`:调整了np化的顺序
+
+### 2024.3.18：
+
+`test.py`:引入画图辅助函数;默认激活函数变为$Tanh()$;默认使用$Adam+L-BFGS$进行优化;加入$L_2$误差的计算;$loss$改为对数图
+
+`data.py`:改为继承Dataset;从而允许使用dataloader进行mini-batch训练
+
+`loss.py`:新增了pointcontainer容器;从而允许以None point进行初始化;新增了update_point方法;从而允许在过程中增加新的点
+
+`pinn.py`:删去了冗余的point成员;增加了$L-BFGS$​的闭包函数;增加了train方法;从而允许使用最基本的训练模块;将save方法抽离
+
+### 2024.3.7:
+
+增加了cudnn基准，和一些提示信息。
+
+### 2024.2.20:
+
+为ResNet添加了初始化,添加了加载模型的路径和提示信息。
+
+
+
+## 代码结构
+
+![1](1.png)
+
+对于上述的代码，简述以下几个关键部分：
+
+1. `NN` 中的各个`.py`，定义了一些基本的神经网络的类模型，具体搭建方法参考文件内部注释。
+2. `data.py` 是数据的生成文件，创建了点集类`point`，其主要功能是产生一些随机数，用于PINN所需的边界条件训练点、初始时刻训练点、内部训练点、精确label训练点
+3. `loss.py` 是定义了损失函数类的文件，这里定制了特定的损失函数，并把损失函数封装成了`LossCompute`类。
+4. `pinn.py` 是使用上述定义的网络结构、数据和损失函数进行训练的主程序，其中的`pinn`类中实现了模型的训练、模型参数的保存等功能。
+6. `test.py`是项目的入口，这里完成所有参数的初始化及后续的数据处理，提供了设置随机种子、设置随机化方法以及读取模型参数的功能。
+
+具体来看，使用这4个文件实现的流程如下：
+
+1. 首先，需要在`test.py`文件中确定训练的一些参数，例如随机种子、训练的周期总数、$loss$阈值、损失函数、模型、数据点、优化器、权重初始化方式、损失权重和计算设备。然后以上述参数创建一个`pinn`对象。
+
+2. 调用`pinn`对象中的`train()`方法，开始训练。在训练中，根据设定的总周期数进行循环，在每一次循环中，计算损失函数，并进行反向传播和参数更新。
+
+3. 在`train()`方法中，可以对模型进行保存，并且模型的参数、优化器的状态、当前训练的周期数以及当前的损失值都会被保存下来。这样的话，当想要接着之前的状态继续训练模型、或者使用训练好的模型进行预测时，就可以直接加载之前保存的模型。 
+
+4. 直接加载刚刚训练所保存的参数(或者加载之前训练所保存的参数)，并进行后续预测及绘图。
+
+上述就是这四份代码文件的基本用法和使用流程，具体的参数设置需要根据实际的需求和数据情况进行设置。
+
+## 运行方法
+
+直接运行`test.py`即可，程序将会用PINN求解下述示例PDE：
 $$
 \left\{
 \begin{aligned}
@@ -35,244 +93,70 @@ $$
 $$
 精确解为$u=e^{-t}\sin (\pi x)$
 
-硬边界即:
+所使用的参数可在`test.py`中找到
+
+直接运行`test_hard.py`，程序将会以硬边界求解上述示例PDE。即:
 $$
 \hat{u}(x,t)=(x-1)(x+1)tNN(x,t,\theta)+\sin (\pi x)
 $$
 
-具体来说, 注意力机制的基本思想是为每个子损失函数的采样点赋予动态权重, 并在每轮训练中自动更新这些权重, 从而在训练过程中实现更细粒度、更灵活的权重调节. 与传统的固定或比例性权重不同, 这些自适应权重可以根据实时训练反馈进行调整, 以更精确地反映当前各子损失函数的重要性和贡献度. 从而可以看作是"软注意力层"
 
-将损失函数$\mathcal{L}$改写如下:
-$$
-\begin{equation}
-    \mathcal{L}(\boldsymbol{\boldsymbol{\lambda}}_{pde}, \boldsymbol{\lambda}_{ini}, \boldsymbol{\lambda}_{bound})=\mathcal{L}_{pde}(\boldsymbol{\lambda}_{pde})+\mathcal{L}_{ini}(\boldsymbol{\lambda}_{ini})+\mathcal{L}_{bound}(\boldsymbol{\lambda}_{bound}). 
-\end{equation}
-$$
+## 编译条件
 
-其中
-$$
-\begin{equation}
-\boldsymbol{\lambda}_{pde}=
-\left(
-\begin{array}{c}
- \lambda_{1}^{pde}\\
- \lambda_{2}^{pde}\\
- \vdots\\
- \lambda_{N_{pde}}^{pde}\\
- \end{array}
- \right), 
- \quad
- \boldsymbol{\lambda}_{ini}=
-\left(
-\begin{array}{c}
-  \lambda_{1}^{ini}\\
-  \lambda_{1}^{ini}\\
- \vdots\\
-  \lambda_{N_{ini}}^{ini}\\
- \end{array}
- \right), 
- \quad
- \boldsymbol{\lambda}_{bound}=
-\left(
-\begin{array}{c}
-  \lambda_{1}^{b}\\
-  \lambda_{2}^{b}\\
- \vdots\\
- \lambda_{N_{b}}^{b}\\
- \end{array}
- \right). 
-\end{equation}
-$$
-是可训练的、分别对应于$PDE$采样点、边界条件采样点、初始条件采样点的非负权重矩阵. 而$\mathcal{L}_{pde}(\mathcal{L}_{pde}), $
-$\mathcal{L}_{ini}(\mathcal{L}_{ini}), \mathcal{L}_{bound}(\mathcal{L}_{bound})$​​分别代表:
-$$
-\begin{equation*}
-\left\{
-\begin{aligned}
-\mathcal{L}_{pde}(\boldsymbol{\lambda}_{pde})&:=\frac{1}{N_{pde}}\sum_{i=1}^{N_{pde}}\sigma(\lambda_{i}^{pde})\left|\mathcal{F}(x_i^{pde}, t_i^{pde})\right|^2, \\
-\mathcal{L}_{ini}(\boldsymbol{\lambda}_{ini})&:=\frac{1}{N_{ini}}\sum_{i=1}^{N_{ini}}\sigma(\lambda_{i}^{ini})\left|\mathcal{N}_{\theta}(x_i^{ini}, 0)-x_i^{ini}\cos(\pi x_i^{ini})\right|^2, \\
-\mathcal{L}_{bound}(\boldsymbol{\lambda}_{bound})&:=\frac{1}{N_{b}}\sum_{i=1}^{N_{b}}\sigma(\lambda_{i}^{b})\left(\left|\mathcal{N}_{\theta}(1, t_i^{b})-\mathcal{N}_{\theta}(-1, t_i^{b})\right|^2+\left|\frac{\partial\mathcal{N}_{\theta}}{\partial x}(1, t_i^{b})-\frac{\partial\mathcal{N}_{\theta}}{\partial x}(-1, t_i^{b})\right|^2\right). \\
-\end{aligned}
-\right. 
-\end{equation*}
-$$
+python 3.12.2
 
+pytorch 2.2 +cu12.1
 
-为了进一步增强自适应权重层的效果, 文中引入了一个定义在$[0, +\infty)$上的非负、严格单调递增的连续函数$\sigma(\cdot)$, 用来放大权重的影响. 为方便叙述, 称这个函数为“激励函数”, 其作用是通过特定的数学变换, 使得权重能够在更广泛的范围内起作用, 从而更好地突出某些关键组分的重要性. 常用的激励函数包括多项式函数、指数函数和对数函数等. 不同的激励函数能够产生不同的效果, 通过选择合适的激励函数, 可以进一步加强模型的表现. 
-
-这里各采样点的权重依照以下机制更新:
-$$
-\begin{equation}
-    \left\{
-    \begin{aligned}
-\boldsymbol{\lambda}^{k+1}_{pde}&=\boldsymbol{\lambda}^{k}_{pde}+\rho_{pde}^{k}\nabla_{\boldsymbol{\lambda}_{pde}}\mathcal{L}(\boldsymbol{\lambda}^{k}_{pde}, \boldsymbol{\lambda}^{k}_{ini}, \boldsymbol{\lambda}^{k}_{bound}), \\
-\boldsymbol{\lambda}^{k+1}_{ini}&=\boldsymbol{\lambda}^{k}_{ini}+\rho_{ini}^{k}\nabla_{\boldsymbol{\lambda}_{ini}}\mathcal{L}(\boldsymbol{\lambda}^{k}_{pde}, \boldsymbol{\lambda}^{k}_{ini}, \boldsymbol{\lambda}^{k}_{bound}), \\
-\boldsymbol{\lambda}^{k+1}_{bound}&=\boldsymbol{\lambda}^{k}_{bound}+\rho_{bound}^{k}\nabla_{\boldsymbol{\lambda}_{bound}}\mathcal{L}(\boldsymbol{\lambda}^{k}_{pde}, \boldsymbol{\lambda}^{k}_{ini}, \boldsymbol{\lambda}^{k}_{bound}), \\   
-    \end{aligned}
-    \right. 
-\end{equation}
-$$
-
-其中$\rho_{\mathcal{L}ambda}^{k},$ $\mathcal{L}ambda=pde,$ $ini,$ $bound$ 指各权重层分别在 $k$ 轮时的学习率, 而
-$$
-\begin{equation*}
-\begin{aligned}
-    \nabla_{\boldsymbol{\lambda}_{pde}}\mathcal{L}(\boldsymbol{\lambda}^{k}_{pde}, \boldsymbol{\lambda}^{k}_{ini}, \boldsymbol{\lambda}^{k}_{bound})&=
-    \frac{1}{N_{pde}}
-    \left(
-    \begin{aligned}
-        &\sigma'(\lambda_{1}^{pde, k})\left|\mathcal{F}(x_i^{pde}, t_i^{pde})\right|^2\\
-        &\cdots \\
-        &\sigma'(\lambda_{N_{pde}}^{pde, k})\left|\mathcal{F}(x_i^{pde}, t_i^{pde})\right|^2\\
-    \end{aligned}
-    \right), \\
-        \nabla_{\boldsymbol{\lambda}_{ini}}\mathcal{L}(\boldsymbol{\lambda}^{k}_{pde}, \boldsymbol{\lambda}^{k}_{ini}, \boldsymbol{\lambda}^{k}_{bound})&=
-    \frac{1}{N_{ini}}
-    \left(
-    \begin{aligned}
-        &\sigma'(\lambda_{1}^{ini, k})\left|\mathcal{N}_{\theta}(x_i^{ini}, 0)-x_i^{ini}\cos(\pi x_i^{ini})\right|^2\\
-        &\cdots \\
-        &\sigma'(\lambda_{N_{ini}}^{ini, k})\left|\mathcal{N}_{\theta}(x_i^{ini}, 0)-x_i^{ini}\cos(\pi x_i^{ini})\right|^2\\
-    \end{aligned}
-    \right), \\ 
-        \nabla_{\boldsymbol{\lambda}_{bound}}\mathcal{L}(\boldsymbol{\lambda}^{k}_{pde}, \boldsymbol{\lambda}^{k}_{ini}, \boldsymbol{\lambda}^{k}_{bound})&=
-    \frac{1}{N_{b}}
-    \left(
-    \begin{aligned}
-        &\sigma'(\lambda_{1}^{b, k})\left(\left|\mathcal{N}_{\theta}(1, t_i^{b})-\mathcal{N}_{\theta}(-1, t_i^{b})\right|^2+\left|\frac{\partial\mathcal{N}_{\theta}}{\partial x}(1, t_i^{b})-\frac{\partial\mathcal{N}_{\theta}}{\partial x}(-1, t_i^{b})\right|^2\right)\\
-        & \cdots \\
-        &\sigma'(\lambda_{N_{b}}^{b, k})\left(\left|\mathcal{N}_{\theta}(1, t_i^{b})-\mathcal{N}_{\theta}(-1, t_i^{b})\right|^2+\left|\frac{\partial\mathcal{N}_{\theta}}{\partial x}(1, t_i^{b})-\frac{\partial\mathcal{N}_{\theta}}{\partial x}(-1, t_i^{b})\right|^2\right)\\
-    \end{aligned}
-    \right). 
-\end{aligned}
-\end{equation*}
-$$
-
-由于$\sigma(\cdot)$是严格单调递增函数, 从而$\sigma'(\cdot)>0,$​​ 这就确保了任何关于权重层的更新都只会增加而不会减少. 
+一点点运气+良好的心态
 
 ## 运行结果
 
-PINN:
+`test.py`:
 
-![1](D:\pythoncode\pinn\2.png)
+![1](2.png)
 
 $L_2误差为0.0023934857454150915,训练时间为71.6s$
 
-带硬边界的PINN:
+`test_hard.py`:
 
-![1](D:\pythoncode\pinn\3.png)
+![1](3.png)
 
 $L_2误差为0.00065491913119331,训练时间100.9s$
 
-带有注意力机制的硬边界PINN`test_hard.py`:
+## 注意事项
 
-![1](figures\pinn_A_H.png)
+1.即便设置了相同的随机种子，哪怕使用同一机器的不同设备(如GPU:0和GPU:1、GPU和CPU)，最终结果仍可能**不同!**
 
-$L_2误差为0.00015310250455513597,训练时间为135.1s$
+2.针对不同的方程和条件,`point`,`LossCompute`类可能需要重写
 
-## possion(三角函数)
+## 物理信息神经网络简介(PINN)
 
-直接运行`possion_hard.py`，程序将会以硬边界求解下述possion问题：
+不妨在域$\Omega\times T=[-1,1]\times[0,1]$上定义一个通用的二阶PDE方程:
 $$
 \left\{
 \begin{aligned}
--\Delta u &= 2\pi^2\sin\pi x \sin \pi y &(x,y) \ on \ \Omega \\
-u &= 0&(x,y)\ on \ \partial \Omega \\
-\Omega &= (-2,2) \times (-2,2)
+&\mathcal{F}(u,\nabla u ,\nabla^2 u )=0\\
+&u(x=1,t)=f(t)\\
+&u(x=-1,t)=g(t)\\
+&u(x,t=0)=h(x)
 \end{aligned}
 \right.
 $$
-硬边界即:
+
+### loss
+
 $$
-\hat{u}(x,t)=(x-2)(x+2)(y-2)(y+2)NN(x,y,\theta)
-$$
-
-## 运行结果
-
-PINN:
-
-![1](figures\possion_base.png)
-
-$L_2误差为0.5102556943893433,训练时间为385.1s$
-
-硬边界PINN:
-
-![1](figures\possion_hard.png)
-
-$L_2误差为0.00010067245602840558,训练时间为303.8s$
-
-带有注意力机制的硬边界PINN`test_possion_hard.py`:
-
-![1](figures\possion_attention.png)
-
-$L_2误差为4.983487815479748e-05,训练时间为113.2s$
-
-## possion(多项式)
-
-直接运行`possion_hard.py`，程序将会以硬边界求解下述possion问题：
-$$
-\left\{
-\begin{aligned}
--\Delta u &= x^2y^2 &(x,y) \ on \ \Omega \\
-u &= 0&(x,y)\ on \ \partial \Omega \\
-\Omega &= (-1,1) \times (-1,1)
-\end{aligned}
-\right.
-$$
-硬边界即:
-$$
-\hat{u}(x,t)=(x-1)(x+1)(y-1)(y+1)NN(x,y,\theta)
+\underset{\theta^*\in\Theta}{\arg \min}\ w_1\mathcal{L}_{pde}+w_2\mathcal{L}_{ini}+w_3\mathcal{L}_{bound}+w_4\mathcal{L}_{real}
 $$
 
-## 运行结果
-
-硬边界PINN:
-
-![1](figures\possion2_hard.png)
-
-$L_2误差为0.0003638958816223158,训练时间为195.1s$
-
-带有注意力机制的硬边界PINN`test_possion2_hard.py`:
-
-![1](figures\possion2_attention.png)
-
-$L_2误差为0.00047229572998226877,训练时间为424.4s$
-
-## Allen-Cahn
-
-直接运行`AC_hard.py`，程序将会以硬边界求解下述Allen-Cahn问题：
 $$
-\left\{
-\begin{aligned}
-&u_t - 0.0001u_{xx}+5u^3-5u=0\\
-&u(0,x)=x^2\cos(\pi x)\\
-&u(t,-1)=u(t,1)=-1\\
-&\Omega \times T=[-1,1]\times[0,1]
-\end{aligned}
-\right.
-$$
-硬边界即:
-$$
-\hat{u}(x,t)=(x-1)(x+1)tNN(x,t,\theta)+x^2\cos(\pi x)
+\mathcal{L}_{pde}:=\frac{1}{N_{pde}}\sum_{i=1}^{N_{pde}}|\mathcal{F}(\mathcal{N}(x_i,t_i,\theta))|^2\\
+\mathcal{L}_{ini}:=\frac{1}{N_{ini}}\sum_{i=1}^{N_{ini}}|\mathcal{F}(\mathcal{N}(x_i,0,\theta))-h(x_i)|^2\\
+\mathcal{L}_{bound}:=\frac{1}{N_{bound}}\sum_{i=1}^{N_{bound}}|\mathcal{F}(\mathcal{N}(x_i=\pm1,t_i,\theta))-(f或g)(x_i)|^2\\
+\mathcal{L}_{real}:=\frac{1}{N_{real}}\sum_{i=1}^{N_{real}}|\mathcal{F}(\mathcal{N}(x_i,t_i,\theta))-u(x_i,t_i)|^2
 $$
 
-## 运行结果
+其中$\mathcal{N}(x,t,\theta)$代表以给定的$\theta$为参数的神经网络,输入$x,t$所产生的输出,其对应偏导通过自动微分机求得,$\{x_i,t_i\}_{i=1}^N$是给定的训练集,$\Theta$代表神经网络所有可能的参数$\theta$所构成的集合,$u(x,t)$代表精确解,$w_i$代表各损失的权重
 
-RAR_PINN:
-
-![1](figures\AC_RAR.png)
-
-$L_2误差为0.02517542242777833,训练时间为1716.2s$
-
-硬边界PINN:
-
-![1](figures\AC_hard.png)
-
-$L_2误差为0.013191858378527654,训练时间为615.0s$
-
-带有注意力机制的硬边界PINN`AC_hard.py`:
-
-![1](figures\AC_Attention.png)
-
-$L_2误差为0.007096630355174227,训练时间为367.9s$
+如果$w_4\ne 0$(使用$\mathcal{L}_{real}$)则为弱监督学习，否则为无监督学习。
 
