@@ -9,7 +9,6 @@
 
 import torch
 
-
 class LossCompute:
     def __init__(self, model, loss_func, point, loss_weight):
         self.model = model
@@ -44,7 +43,12 @@ class LossCompute:
         return self.loss_func(out, torch.exp(-self.point.real_t) * torch.sin(torch.pi * self.point.real_x))
 
     def loss(self):
-        return self.loss_weight[0]*self.loss_pde()+self.loss_weight[1]*self.loss_bound()+self.loss_weight[2]*self.loss_ini()+self.loss_weight[3]*self.loss_real()
+        loss_funcs = [self.loss_pde, self.loss_bound, self.loss_ini, self.loss_real]
+        total_loss = 0
+        for weight, loss_func in zip(self.loss_weight, loss_funcs):
+            if weight != 0:
+                total_loss += weight * loss_func()
+        return total_loss
 
     # 更新已存在的点
     def update_points(self, new_point_container):
@@ -72,3 +76,11 @@ class PointContainer:
         self.bound_xm1 = bound_xm1 if bound_xm1 is not None else None
         self.bound_tx1 = bound_tx1 if bound_tx1 is not None else None
         self.bound_txm1 = bound_txm1 if bound_txm1 is not None else None
+
+    def to(self, device, grad_flag, **kargs):
+        attrs = ['pde_x', 'pde_t', 'ini_x', 'ini_t',
+                'bound_x1', 'bound_tx1', 'bound_xm1', 'bound_txm1']
+        for attr in attrs:
+            if hasattr(self, attr):
+                setattr(self, attr, getattr(self, attr).to(device,**kargs).requires_grad_(grad_flag))
+        return self

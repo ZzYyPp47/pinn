@@ -12,6 +12,16 @@
 
 ## 更新
 
+### 2025.11.24
+
+`data.py`: 少许bug修复
+
+`loss.py`: 改进性能,引入`to`方法
+
+`pinn.py`: 现在采用`dataloader`训练,改进了训练性能
+
+`OtherFunctions.py`: 将辅助函数统一归纳
+
 ### 2024.4.7:
 
 `test.py`:改进了一些性能

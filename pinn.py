@@ -7,8 +7,8 @@
 @File: pinn.py
 '''
 
-# 导入必要的包
 import torch
+from loss import PointContainer
 import time
 import torch.nn as nn
 import matplotlib.pyplot as plt
@@ -19,7 +19,7 @@ from loss import *
 
 class pinn(object):
     # 初始化
-    def __init__(self,name,total_epochs,tor,loss_func,model,point,opt,weights_init,loss_weight,device):
+    def __init__(self,name,total_epochs,batch_size,tor,loss_func,model,dataloader,opt,weights_init,loss_weight,device):
         self.total_epochs = total_epochs
         self.path = 'save/'+name+'.pth'# '_'+datetime.date.today().strftime('%Y-%m-%d,%H:%M:%S')+'.pth'
         self.tor = tor # loss的停止阈值
@@ -29,7 +29,10 @@ class pinn(object):
         self.loss_func = loss_func # 损失函数(接口)
         self.model = model # 神经网络(接口)
         self.opt = opt # 优化器(接口)
-        self.loss_computer = LossCompute(model, loss_func, point, loss_weight)  # 损失计算(接口)
+        self.dataloader = dataloader
+        self.dataset_len = len(self.dataloader.dataset)
+        self.loss_weight = loss_weight
+        self.batch_size = batch_size
         print(self.model)
 
     # 参数初始化
@@ -46,7 +49,7 @@ class pinn(object):
         self.opt.zero_grad()  # 清零梯度
         Loss = self.loss_computer.loss()  # 计算损失
         self.Epochs_loss.append([self.Epochs_loss[-1][0] + 1, Loss.item()])
-        print('loss:', Loss.item())
+        print(f'\rloss: {Loss.item()}',end='')
         Loss.backward(retain_graph=True) # 反向计算出梯度
         return Loss.item()
 
@@ -57,21 +60,18 @@ class pinn(object):
         self.model.train() # 启用训练模式
         print('start training,using seed:{}'.format(torch.initial_seed()))
         for epoch in range(self.total_epochs):
-            self.opt.zero_grad() # 清零梯度信息
-            Loss = self.loss_computer.loss()
-            self.Epochs_loss.append([epoch + 1,Loss.item()])
-            Loss.backward(retain_graph=True) # 反向计算出梯度
-            self.opt.step() # 更新参数
-            if (epoch + 1)% 1000 == 0:
-                print('Epoch:{}/{},Loss={}'.format(epoch + 1,self.total_epochs,Loss.item()))
-            if Loss <= self.tor:
-                print('Epoch:{}/{},Loss={}<={}(given tolerate loss)'.format(epoch + 1,self.total_epochs,Loss.item(),self.tor))
-                # self.Epochs_loss = np.array(self.Epochs_loss)
-                break
-        # self.Epochs_loss = np.array(self.Epochs_loss)
-        # state_dict = {"Arc": self.model,"seed": torch.initial_seed(), "model": self.model.state_dict(), "opt": self.opt.state_dict(), "loss": self.Epochs_loss}
-        # torch.save(state_dict,self.path)
-        # print('training terminated,saved to {}'.format(self.path))
+            for batch, kargs in enumerate(self.dataloader):
+                point = PointContainer(**kargs).to(self.device,grad_flag = True,non_blocking=True)
+                self.loss_computer = LossCompute(self.model, self.loss_func, point, self.loss_weight)
+                self.opt.zero_grad(set_to_none=True) # 清零梯度信息
+                Loss = self.loss_computer.loss()
+                self.Epochs_loss.append([epoch + 1,Loss.item()])
+                Loss.backward(retain_graph=True) # 反向计算出梯度
+                self.opt.step() # 更新参数
+                print(f'\rEpoch:{epoch + 1}/{self.total_epochs},batch = {batch + 1}/{self.dataset_len // self.batch_size},Loss={Loss.item():1.5e}',end='')
+                if Loss <= self.tor:
+                    print(f'Epoch:{epoch + 1}/{self.total_epochs},batch = {batch + 1}/{self.dataset_len // self.batch_size},Loss={Loss.item()}<={self.tor}(given tolerate loss)')
+                    return
 
     # 最基本的训练模块
     def train(self):
